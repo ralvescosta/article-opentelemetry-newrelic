@@ -3,7 +3,8 @@
 members = [
   "bins/http_server",
   "bins/rabbitmq_consumer",
-  "infra"
+  "infra",
+  "shared"
 ]
 
 default-members = [

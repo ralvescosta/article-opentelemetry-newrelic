@@ -3,6 +3,20 @@ name = "rabbitmq-consumer"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+shared = { path = "../../shared" }
+
+configs = { workspace = true }
+configs-builder = { workspace = true }
+logging = { workspace = true }
+traces = { workspace = true }
+amqp = { workspace = true  }
+sql-pool = { workspace = true, features = ["postgres"]}
+health-readiness = { workspace = true }
+
+tokio = { version = "1.27.0", features = ["rt-multi-thread", "macros"] }
+tracing = { version = "0.1.37" }
+opentelemetry = { version = "0.19.0" }
+async-trait = { version = "0.1.68" }
+serde = { version = "1.0.159", features = ["derive"] }
+lapin = { version = "2.1.1" }

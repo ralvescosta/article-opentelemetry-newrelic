@@ -1,0 +1,12 @@
+[package]
+name = "shared"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+logging = { workspace = true }
+amqp = { workspace = true  }
+
+tracing = { version = "0.1.37" }
+serde = { version = "1.0.159", features = ["derive"] }
+serde_json = { version = "1.0.89" }
