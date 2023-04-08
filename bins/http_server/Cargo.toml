@@ -1,0 +1,22 @@
+[package]
+name = "http-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+configs = { workspace = true }
+configs-builder = { workspace = true }
+logging = { workspace = true  }
+httpw = { workspace = true }
+auth = { workspace = true }
+traces = { workspace = true  }
+metrics = { workspace = true  }
+
+actix-web = { version = "4.3.1" }
+serde = { version = "1.0.159", features = ["derive"] }
+serde_json = { version = "1.0.95" }
+opentelemetry = { version = "0.19.0" }
+async-trait = { version = "0.1.68" }
+tracing = { version = "0.1.37" }
+tokio = { version = "1.27.0", features = ["default", "rt-multi-thread", "macros", "signal"] }
+utoipa = { version = "3.2.1", features = ["actix_extras"] }

@@ -1,0 +1,25 @@
+[workspace]
+
+members = [
+  "bins/http_server",
+  "bins/rabbitmq_consumer",
+  "infra"
+]
+
+default-members = [
+  "bins/http_server",
+  "bins/rabbitmq_consumer"
+]
+
+[workspace.dependencies]
+configs = { path = "../ruskit/configs" }
+configs-builder = { path = "../ruskit/configs_builder" }
+httpw = { path = "../ruskit/httpw" }
+auth = { path = "../ruskit/auth" }
+rx-protocol = { path = "../ruskit/rx_protocol" }
+logging = { path = "../ruskit/logging" }
+traces = { path = "../ruskit/traces" }
+metrics = { path = "../ruskit/metrics" }
+amqp = { path = "../ruskit/amqp" }
+sql-pool = { path = "../ruskit/sql_pool", features = ["postgres"] }
+health-readiness = { path = "../ruskit/health_readiness" }
