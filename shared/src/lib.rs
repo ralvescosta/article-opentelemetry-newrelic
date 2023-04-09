@@ -1,3 +1,2 @@
-mod simple_msg;
-
-pub use simple_msg::SimpleAmqpMessage;
+pub mod repositories;
+pub mod viewmodels;

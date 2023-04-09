@@ -1,7 +1,7 @@
 use amqp::{dispatcher::ConsumerHandler, errors::AmqpError};
 use async_trait::async_trait;
 use opentelemetry::Context;
-use shared::SimpleAmqpMessage;
+use shared::viewmodels::SimpleAmqpMessage;
 use std::sync::Arc;
 use tracing::info;
 

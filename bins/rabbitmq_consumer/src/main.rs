@@ -12,7 +12,7 @@ use configs_builder::ConfigBuilder;
 use consumers::SimpleConsumer;
 use health_readiness::HealthReadinessServer;
 use lapin::{Channel, Connection};
-use shared::SimpleAmqpMessage;
+use shared::viewmodels::SimpleAmqpMessage;
 use std::{error::Error, sync::Arc};
 use tracing::error;
 

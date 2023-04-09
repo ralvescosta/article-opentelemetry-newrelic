@@ -4,11 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+infra = { path = "../../infra" }
+shared = { path = "../../shared" }
+
 configs = { workspace = true }
 configs-builder = { workspace = true }
-logging = { workspace = true  }
+logging = { workspace = true }
+http-components = { workspace = true }
 httpw = { workspace = true }
-auth = { workspace = true }
+amqp = { workspace = true }
 traces = { workspace = true  }
 metrics = { workspace = true  }
 
@@ -20,3 +24,4 @@ async-trait = { version = "0.1.68" }
 tracing = { version = "0.1.37" }
 tokio = { version = "1.27.0", features = ["default", "rt-multi-thread", "macros", "signal"] }
 utoipa = { version = "3.2.1", features = ["actix_extras"] }
+lapin = { version = "2.1.1" }

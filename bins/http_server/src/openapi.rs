@@ -1,5 +1,5 @@
 use crate::{controllers as tc, viewmodels as tvm};
-use httpw::viewmodels::HTTPError;
+use http_components::viewmodels::HTTPError;
 use utoipa::{
     openapi::{
         self,

@@ -1,6 +1,6 @@
 use crate::viewmodels::ToDoRequest;
 use actix_web::{delete, get, post, web::Json, HttpRequest, HttpResponse, Responder};
-use httpw::extractors::JwtAuthenticateExtractor;
+use http_components::extractors::JwtAuthenticateExtractor;
 
 /// Request to create a new ToDo.
 ///
