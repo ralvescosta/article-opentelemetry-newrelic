@@ -5,3 +5,7 @@ edition = "2021"
 
 [dependencies]
 shared = { path = "../shared"}
+
+httpw = { workspace = true }
+
+tracing = { version = "0.1.37" }

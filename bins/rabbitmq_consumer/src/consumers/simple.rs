@@ -4,7 +4,6 @@ use opentelemetry::Context;
 use shared::viewmodels::SimpleAmqpMessage;
 use std::sync::Arc;
 use tracing::info;
-
 pub struct SimpleConsumer {}
 
 impl SimpleConsumer {

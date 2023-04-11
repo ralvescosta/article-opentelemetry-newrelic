@@ -1,6 +1,13 @@
+use std::sync::Arc;
+
 use crate::viewmodels::ToDoRequest;
-use actix_web::{delete, get, post, web::Json, HttpRequest, HttpResponse, Responder};
+use actix_web::{
+    delete, get, post,
+    web::{Data, Json},
+    HttpRequest, HttpResponse, Responder,
+};
 use http_components::extractors::JwtAuthenticateExtractor;
+use shared::repositories::TodoRepository;
 
 /// Request to create a new ToDo.
 ///
@@ -22,7 +29,11 @@ use http_components::extractors::JwtAuthenticateExtractor;
     security()
 )]
 #[post("")]
-pub async fn post(_thing: Json<ToDoRequest>, _auth: JwtAuthenticateExtractor) -> impl Responder {
+pub async fn post(
+    _thing: Json<ToDoRequest>,
+    repo: Data<Arc<dyn TodoRepository>>,
+) -> impl Responder {
+    repo.print();
     HttpResponse::Ok().body("post::things")
 }
 

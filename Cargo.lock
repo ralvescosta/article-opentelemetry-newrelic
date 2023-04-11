@@ -1860,7 +1860,9 @@ dependencies = [
 name = "infra"
 version = "0.1.0"
 dependencies = [
+ "httpw",
  "shared",
+ "tracing",
 ]
 
 [[package]]

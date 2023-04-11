@@ -4,10 +4,10 @@ mod routes;
 mod viewmodels;
 
 use actix_web::web::{Data, ServiceConfig};
-use amqp::{channel::new_amqp_channel, publisher::AmqpPublisher};
+use amqp::channel::new_amqp_channel;
 use configs::{Configs, Empty};
 use configs_builder::ConfigBuilder;
-use httpw::server::{HTTPServer, RouteConfig};
+use httpw::server::{HTTPServer, ServiceConfigs};
 use infra::repositories::TodoRepositoryImpl;
 use lapin::Channel;
 use openapi::ApiDoc;
@@ -22,8 +22,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let (_, channel) = new_amqp_channel(&cfg).await?;
 
+    let container_args = ContainerArgs {
+        channel: channel.clone(),
+    };
+    let service_config_fn = move |cfg: &mut ServiceConfig| {
+        container(cfg, &container_args);
+    };
+
     let doc = ApiDoc::openapi();
     let server = HTTPServer::new(&cfg.app)
+        // .register(service_config_fn)
         .register(todos_routes::routes())
         .openapi(&doc);
 
@@ -32,15 +40,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn container(channel: Arc<Channel>) -> RouteConfig {
-    let m = channel.clone();
-    |cfg: &mut ServiceConfig| {
-        // let publisher = AmqpPublisher::new(m.clone());
-        let repository = TodoRepositoryImpl::new();
+struct ContainerArgs {
+    channel: Arc<Channel>,
+}
 
-        cfg.app_data(Data::new(String::new()));
-        cfg.app_data::<Data<Arc<dyn TodoRepository>>>(Data::new(repository));
-    }
+fn container(cfg: &mut ServiceConfig, args: &ContainerArgs) {
+    let ch = args.channel.clone();
+    cfg.app_data(Data::<Arc<dyn TodoRepository>>::new(
+        TodoRepositoryImpl::new(),
+    ));
 }
 
 async fn default_setup<'cfg>() -> Result<Configs<Empty>, Box<dyn Error>> {
