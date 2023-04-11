@@ -13,6 +13,7 @@ use consumers::SimpleConsumer;
 use health_readiness::HealthReadinessServer;
 use lapin::{Channel, Connection};
 use shared::viewmodels::SimpleAmqpMessage;
+use sql_pool::postgres::conn_pool;
 use std::{error::Error, sync::Arc};
 use tracing::error;
 
@@ -25,13 +26,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let cfg = default_setup().await?;
 
     let (conn, channel, queue) = amqp_setup(&cfg).await?;
+    let db_conn = Arc::new(conn_pool(&cfg.postgres)?);
 
     let handler = SimpleConsumer::new();
 
     let dispatcher =
         AmqpDispatcher::new(channel).register(&queue, &SimpleAmqpMessage::default(), handler);
 
-    let health_readiness = HealthReadinessServer::new(&cfg.health_readiness).rabbitmq(conn);
+    let health_readiness = HealthReadinessServer::new(&cfg.health_readiness)
+        .rabbitmq(conn)
+        .postgres(db_conn.clone());
 
     match tokio::join!(health_readiness.run(), dispatcher.consume_blocking()) {
         (Err(e), _) => {
