@@ -1,8 +1,7 @@
 use crate::controllers;
 use actix_web::web::{self, ServiceConfig};
-use httpw::server::ServiceConfigs;
 
-pub fn routes() -> impl FnOnce(&mut ServiceConfig) {
+pub fn routes() -> impl FnMut(&mut web::ServiceConfig) + Send + Sync + 'static {
     move |cfg: &mut ServiceConfig| {
         cfg.service(
             web::scope("/v1/todos")
