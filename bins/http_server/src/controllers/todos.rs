@@ -7,9 +7,10 @@ use actix_web::{
     HttpRequest, HttpResponse, Responder, ResponseError,
 };
 use amqp::publisher::{Payload, Publisher};
-use http_components::extractors::JwtAuthenticateExtractor;
-use http_components::viewmodels::HTTPError;
-use opentelemetry::Context;
+use http_components::{
+    extractors::JwtAuthenticateExtractor, middlewares::otel::HTTPExtractor, viewmodels::HTTPError,
+};
+use opentelemetry::global;
 use shared::{models::todo::TodoCreatedMessage, repositories::TodoRepository};
 use std::sync::Arc;
 use tracing::error;
@@ -35,11 +36,14 @@ use tracing::error;
 )]
 #[post("")]
 pub async fn post(
+    req: HttpRequest,
     todo: Json<CreateTodoRequest>,
     repo: Data<Arc<dyn TodoRepository>>,
     publisher: Data<Arc<dyn Publisher>>,
 ) -> Result<impl Responder, impl ResponseError> {
-    let ctx = Context::new();
+    let ctx = global::get_text_map_propagator(|propagator| {
+        propagator.extract(&HTTPExtractor::new(req.headers()))
+    });
 
     let created = match repo.create(&ctx, &todo.0.into()).await {
         Err(err) => {
