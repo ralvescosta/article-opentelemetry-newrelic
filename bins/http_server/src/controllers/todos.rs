@@ -7,6 +7,7 @@ use actix_web::{
     HttpRequest, HttpResponse, Responder,
 };
 use http_components::extractors::JwtAuthenticateExtractor;
+use opentelemetry::Context;
 use shared::repositories::TodoRepository;
 
 /// Request to create a new ToDo.
@@ -33,7 +34,7 @@ pub async fn post(
     _thing: Json<ToDoRequest>,
     repo: Data<Arc<dyn TodoRepository>>,
 ) -> impl Responder {
-    repo.print();
+    repo.print(&Context::new());
     HttpResponse::Ok().body("post::things")
 }
 

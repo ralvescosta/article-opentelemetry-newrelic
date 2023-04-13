@@ -16,7 +16,7 @@ use httpw::server::HTTPServer;
 use infra::repositories::TodoRepositoryImpl;
 use lapin::Channel;
 use openapi::ApiDoc;
-use opentelemetry::global;
+use opentelemetry::{global, Context};
 use routes as todos_routes;
 use shared::repositories::TodoRepository;
 use sql_pool::postgres::conn_pool;
@@ -42,18 +42,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .health_check(Arc::new(health_checker))
         .openapi(&doc);
 
-    let meter = global::meter("http-server");
-    let health_counter = meter
-        .u64_observable_counter("http.server.health")
-        .with_description("HTTP Server Health Counter")
-        .init();
-    match meter.register_callback(move |ctx| health_counter.observe(ctx, 1, &[])) {
-        Err(err) => {
-            error!(error = err.to_string(), "error to register health counter");
-            Err(err)
-        }
-        _ => Ok(()),
-    }?;
+    declare_health_meter()?;
 
     server.start().await?;
 
@@ -84,4 +73,25 @@ fn container(channel: Arc<Channel>) -> impl FnMut(&mut web::ServiceConfig) + Sen
         cfg.app_data(Data::<Arc<dyn Publisher>>::new(publisher));
         cfg.app_data(Data::<Arc<dyn TodoRepository>>::new(repository));
     }
+}
+
+fn declare_health_meter() -> Result<(), Box<dyn Error>> {
+    let meter = global::meter("http-server-meter");
+    let health_counter = meter
+        .u64_observable_counter("http.server.health")
+        .with_description("HTTP Server Health Counter")
+        .init();
+
+    let callback = move |ctx: &Context| {
+        health_counter.observe(ctx, 10, &[]);
+    };
+    match meter.register_callback(callback) {
+        Err(err) => {
+            error!(error = err.to_string(), "error to register health counter");
+            Err(err)
+        }
+        _ => Ok(()),
+    }?;
+
+    Ok(())
 }

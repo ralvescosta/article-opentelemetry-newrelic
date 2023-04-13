@@ -12,6 +12,7 @@ use configs_builder::ConfigBuilder;
 use consumers::SimpleConsumer;
 use health_readiness::HealthReadinessServer;
 use lapin::{Channel, Connection};
+use opentelemetry::{global, Context};
 use shared::viewmodels::SimpleAmqpMessage;
 use sql_pool::postgres::conn_pool;
 use std::{error::Error, sync::Arc};
@@ -36,6 +37,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let health_readiness = HealthReadinessServer::new(&cfg.health_readiness)
         .rabbitmq(conn)
         .postgres(db_conn.clone());
+
+    declare_health_meter()?;
 
     match tokio::join!(health_readiness.run(), dispatcher.consume_blocking()) {
         (Err(e), _) => {
@@ -64,6 +67,7 @@ async fn default_setup() -> Result<Configs<Empty>, Box<dyn Error>> {
         .await?;
 
     traces::otlp::setup(&configs)?;
+    metrics::otlp::setup(&configs)?;
 
     Ok(configs)
 }
@@ -90,4 +94,24 @@ async fn amqp_setup(
         .await?;
 
     Ok((conn, channel, queue))
+}
+
+fn declare_health_meter() -> Result<(), Box<dyn Error>> {
+    let meter = global::meter("http-meter-server");
+    let health_counter = meter
+        .i64_observable_up_down_counter("consumer.health")
+        .with_description("AMQP Consumer Health")
+        .init();
+    let callback = move |ctx: &Context| {
+        health_counter.observe(ctx, 1, &[]);
+    };
+    match meter.register_callback(callback) {
+        Err(err) => {
+            error!(error = err.to_string(), "error to register health counter");
+            Err(err)
+        }
+        _ => Ok(()),
+    }?;
+
+    Ok(())
 }

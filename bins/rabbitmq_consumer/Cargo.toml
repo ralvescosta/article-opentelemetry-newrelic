@@ -10,6 +10,7 @@ configs = { workspace = true }
 configs-builder = { workspace = true }
 logging = { workspace = true }
 traces = { workspace = true }
+metrics = { workspace = true }
 amqp = { workspace = true  }
 sql-pool = { workspace = true, features = ["postgres"]}
 health-readiness = { workspace = true }
