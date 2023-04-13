@@ -13,7 +13,7 @@ use consumers::SimpleConsumer;
 use health_readiness::HealthReadinessServer;
 use lapin::{Channel, Connection};
 use opentelemetry::{global, Context};
-use shared::viewmodels::SimpleAmqpMessage;
+use shared::models::todo::TodoCreatedMessage;
 use sql_pool::postgres::conn_pool;
 use std::{error::Error, sync::Arc};
 use tracing::error;
@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let handler = SimpleConsumer::new();
 
     let dispatcher =
-        AmqpDispatcher::new(channel).register(&queue, &SimpleAmqpMessage::default(), handler);
+        AmqpDispatcher::new(channel).register(&queue, &TodoCreatedMessage::default(), handler);
 
     let health_readiness = HealthReadinessServer::new(&cfg.health_readiness)
         .rabbitmq(conn)

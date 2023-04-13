@@ -1,9 +1,14 @@
+use async_trait::async_trait;
 use opentelemetry::{
     global,
     metrics::{Counter, Unit, UpDownCounter},
     Context,
 };
-use shared::repositories::TodoRepository;
+use shared::{
+    models::todo::{CreateTodo, Todo},
+    repositories::TodoRepository,
+};
+
 use std::sync::Arc;
 use tracing::warn;
 
@@ -34,11 +39,14 @@ impl TodoRepositoryImpl {
     }
 }
 
+#[async_trait]
 impl TodoRepository for TodoRepositoryImpl {
-    fn print(&self, ctx: &Context) {
+    async fn create(&self, ctx: &Context, todo: &CreateTodo) -> Result<Todo, String> {
         warn!("TodoRepositoryImpl::print");
 
         self.up_down_counter.add(ctx, 1, &[]);
         self.counter.add(ctx, 1, &[]);
+
+        Ok(Todo::default())
     }
 }

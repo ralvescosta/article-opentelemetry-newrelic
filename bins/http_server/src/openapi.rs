@@ -16,7 +16,7 @@ use utoipa::{
   components(
     schemas(
       HTTPError,
-      tvm::ToDoRequest, tvm::ToDoResponse,
+      tvm::CreateTodoRequest, tvm::TodoResponse, tvm::DeleteTodoResponse,
     )
   ),
   tags(

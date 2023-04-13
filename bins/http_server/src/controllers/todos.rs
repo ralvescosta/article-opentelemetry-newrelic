@@ -1,14 +1,18 @@
-use std::sync::Arc;
-
-use crate::viewmodels::ToDoRequest;
+use crate::viewmodels::{CreateTodoRequest, TodoResponse};
 use actix_web::{
-    delete, get, post,
+    delete, get,
+    http::StatusCode,
+    post,
     web::{Data, Json},
-    HttpRequest, HttpResponse, Responder,
+    HttpRequest, HttpResponse, Responder, ResponseError,
 };
+use amqp::publisher::{Payload, Publisher};
 use http_components::extractors::JwtAuthenticateExtractor;
+use http_components::viewmodels::HTTPError;
 use opentelemetry::Context;
-use shared::repositories::TodoRepository;
+use shared::{models::todo::TodoCreatedMessage, repositories::TodoRepository};
+use std::sync::Arc;
+use tracing::error;
 
 /// Request to create a new ToDo.
 ///
@@ -19,9 +23,9 @@ use shared::repositories::TodoRepository;
     path = "",
     context_path = "/v1/todos",
     tag = "todos",
-    request_body = ToDoRequest,
+    request_body = CreateTodoRequest,
     responses(
-        (status = 202, description = "Todo requested successfully", body = ToDoResponse),
+        (status = 202, description = "Todo requested successfully", body = ThingResponse),
         (status = 400, description = "Bad request", body = HTTPError),
         (status = 401, description = "Unauthorized", body = HTTPError),
         (status = 403, description = "Forbidden", body = HTTPError),
@@ -31,11 +35,47 @@ use shared::repositories::TodoRepository;
 )]
 #[post("")]
 pub async fn post(
-    _thing: Json<ToDoRequest>,
+    todo: Json<CreateTodoRequest>,
     repo: Data<Arc<dyn TodoRepository>>,
-) -> impl Responder {
-    repo.print(&Context::new());
-    HttpResponse::Ok().body("post::things")
+    publisher: Data<Arc<dyn Publisher>>,
+) -> Result<impl Responder, impl ResponseError> {
+    let ctx = Context::new();
+
+    let created = match repo.create(&ctx, &todo.0.into()).await {
+        Err(err) => {
+            error!(error = err.to_string(), "error to create todo");
+            Err(HTTPError {
+                status_code: StatusCode::BAD_REQUEST.into(),
+                message: "error to create todo".to_owned(),
+                details: "error to create todo".to_owned(),
+            })
+        }
+        Ok(t) => Ok(t),
+    }?;
+
+    let payload = match Payload::new(&TodoCreatedMessage::from(&created)) {
+        Err(err) => {
+            error!(error = err.to_string(), "error to create todo");
+            Err(HTTPError {
+                status_code: StatusCode::BAD_REQUEST.into(),
+                message: "error to create todo".to_owned(),
+                details: "error to create todo".to_owned(),
+            })
+        }
+        Ok(p) => Ok(p),
+    }?;
+
+    match publisher.simple_publish(&ctx, "", &payload, None).await {
+        Err(err) => {
+            error!(error = err.to_string(), "error to create todo");
+            Err(HTTPError {
+                status_code: StatusCode::BAD_REQUEST.into(),
+                message: "error to create todo".to_owned(),
+                details: "error to create todo".to_owned(),
+            })
+        }
+        _ => Ok(HttpResponse::Ok().json(TodoResponse::from(&created))),
+    }
 }
 
 /// Request to get all ToDo's that was created.
@@ -48,7 +88,7 @@ pub async fn post(
     context_path = "/v1/todos",
     tag = "todos",
     responses(
-        (status = 200, description = "Success", body = Vec<ToDoResponse>),
+        (status = 200, description = "Success", body = Vec<ThingResponse>),
         (status = 400, description = "Bad request", body = HTTPError),
         (status = 401, description = "Unauthorized", body = HTTPError),
         (status = 403, description = "Forbidden", body = HTTPError),
@@ -73,7 +113,7 @@ pub async fn list(_req: HttpRequest, _: JwtAuthenticateExtractor) -> impl Respon
     context_path = "/v1/todos",
     tag = "todos",
     responses(
-        (status = 200, description = "Success", body = ToDoResponse),
+        (status = 200, description = "Success", body = ThingResponse),
         (status = 400, description = "Bad request", body = HTTPError),
         (status = 401, description = "Unauthorized", body = HTTPError),
         (status = 403, description = "Forbidden", body = HTTPError),
@@ -99,7 +139,7 @@ pub async fn get(_req: HttpRequest, _: JwtAuthenticateExtractor) -> impl Respond
     tag = "todos",
     request_body = ToDoRequest,
     responses(
-        (status = 200, description = "Deleted", body = ToDoResponse),
+        (status = 200, description = "Deleted", body = DeleteThingResponse),
         (status = 400, description = "Bad request", body = HTTPError),
         (status = 401, description = "Unauthorized", body = HTTPError),
         (status = 403, description = "Forbidden", body = HTTPError),
