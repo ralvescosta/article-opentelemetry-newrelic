@@ -15,7 +15,7 @@ pub struct Todo {
     pub description: String,
     pub created_at: String,
     pub updated_at: String,
-    pub deleted_at: String,
+    pub deleted_at: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]

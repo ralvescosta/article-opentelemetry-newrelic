@@ -1693,6 +1693,7 @@ dependencies = [
  "async-trait",
  "configs",
  "configs-builder",
+ "deadpool-postgres",
  "health-readiness",
  "http-components",
  "httpw",
@@ -1855,6 +1856,7 @@ name = "infra"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "deadpool-postgres",
  "httpw",
  "opentelemetry",
  "shared",

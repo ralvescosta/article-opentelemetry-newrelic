@@ -1,52 +1,125 @@
 use async_trait::async_trait;
+use deadpool_postgres::{
+    tokio_postgres::{types::ToSql, Row},
+    Pool,
+};
 use opentelemetry::{
-    global,
-    metrics::{Counter, Unit, UpDownCounter},
-    Context,
+    global::{self, BoxedTracer},
+    trace::{Span, Status, Tracer},
+    Context, KeyValue,
 };
 use shared::{
     models::todo::{CreateTodo, Todo},
     repositories::TodoRepository,
 };
-
-use std::sync::Arc;
-use tracing::warn;
+use std::{borrow::Cow, sync::Arc};
+use tracing::error;
 
 pub struct TodoRepositoryImpl {
-    counter: Counter<u64>,
-    up_down_counter: UpDownCounter<i64>,
+    tracer: BoxedTracer,
+    pool: Arc<Pool>,
 }
 
 impl TodoRepositoryImpl {
-    pub fn new() -> Arc<TodoRepositoryImpl> {
-        let meter = global::meter("todo-controller");
-        let up_down_counter = meter
-            .i64_up_down_counter("todo_controller_counter")
-            .with_description("HTTP Server Controller")
-            .with_unit(Unit::new("rpm"))
-            .init();
+    pub fn new(pool: Arc<Pool>) -> Arc<TodoRepositoryImpl> {
+        let tracer = global::tracer("todo-repository");
 
-        let counter = meter
-            .u64_counter("todo_controller_counter2")
-            .with_description("HTTP Server Controller")
-            .with_unit(Unit::new("rpm"))
-            .init();
-
-        Arc::new(TodoRepositoryImpl {
-            up_down_counter,
-            counter,
-        })
+        Arc::new(TodoRepositoryImpl { tracer, pool })
     }
 }
 
 #[async_trait]
 impl TodoRepository for TodoRepositoryImpl {
     async fn create(&self, ctx: &Context, todo: &CreateTodo) -> Result<Todo, String> {
-        warn!("TodoRepositoryImpl::print");
+        let query = "INSERT INTO todos (name, description) values ($1, $2) RETURNING *";
 
-        self.up_down_counter.add(ctx, 1, &[]);
-        self.counter.add(ctx, 1, &[]);
+        let row = self
+            .query_one(ctx, query.to_owned(), &[&todo.name, &todo.description])
+            .await?;
 
-        Ok(Todo::default())
+        Ok(Todo {
+            id: row.get(0),
+            name: row.get(1),
+            description: row.get(2),
+            created_at: row.get(3),
+            updated_at: row.get(4),
+            deleted_at: None,
+        })
+    }
+
+    async fn get_by_id(&self, ctx: &Context, id: &str) -> Result<Todo, String> {
+        let query = "SELECT * FROM todos WHERE id = $1 and deleted_at IS NOT NULL";
+
+        let row = self.query_one(ctx, query.to_owned(), &[&id]).await?;
+
+        Ok(Todo {
+            id: row.get(0),
+            name: row.get(1),
+            description: row.get(2),
+            created_at: row.get(3),
+            updated_at: row.get(4),
+            deleted_at: None,
+        })
+    }
+
+    async fn list_paginated(
+        &self,
+        ctx: Context,
+        limit: u64,
+        offset: u64,
+    ) -> Result<Vec<Todo>, String> {
+        todo!()
+    }
+}
+
+impl TodoRepositoryImpl {
+    async fn query_one(
+        &self,
+        ctx: &Context,
+        query: String,
+        params: &[&(dyn ToSql + Sync)],
+    ) -> Result<Row, String> {
+        let mut span = self.tracer.start_with_context("query_one", ctx);
+
+        let conn = match self.pool.get().await {
+            Err(err) => {
+                span.record_error(&err);
+                span.set_status(Status::Error {
+                    description: Cow::from("error to get connection from poll"),
+                });
+
+                error!(error = err.to_string(), "error to get connection from poll");
+                Err(String::from("error to get connection from poll"))
+            }
+            Ok(c) => Ok(c),
+        }?;
+
+        span.set_attributes(vec![KeyValue::new("sql.query", query.clone())]);
+
+        let statement = match conn.prepare(&query).await {
+            Err(err) => {
+                span.record_error(&err);
+                span.set_status(Status::Error {
+                    description: Cow::from("error to prepare statement"),
+                });
+
+                error!(error = err.to_string(), "error to prepare statement");
+                Err(String::from("error to prepare statement"))
+            }
+            Ok(s) => Ok(s),
+        }?;
+
+        match conn.query_one(&statement, params).await {
+            Err(err) => {
+                span.record_error(&err);
+                span.set_status(Status::Error {
+                    description: Cow::from("error to execute query"),
+                });
+
+                error!(error = err.to_string(), "error to execute query");
+                Err(String::from("error to execute query"))
+            }
+            Ok(r) => Ok(r),
+        }
     }
 }

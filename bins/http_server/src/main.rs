@@ -10,6 +10,7 @@ use amqp::{
 };
 use configs::{Configs, Empty};
 use configs_builder::ConfigBuilder;
+use deadpool_postgres::Pool;
 use health_readiness::HealthReadinessServiceImpl;
 use http_components::CustomServiceConfigure;
 use httpw::server::HTTPServer;
@@ -37,7 +38,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let doc = ApiDoc::openapi();
     let server = HTTPServer::new(&cfg.app)
-        .custom_configure(CustomServiceConfigure::new(container(channel.clone())))
+        .custom_configure(CustomServiceConfigure::new(container(
+            channel.clone(),
+            db_conn.clone(),
+        )))
         .custom_configure(CustomServiceConfigure::new(todos_routes::routes()))
         .health_check(Arc::new(health_checker))
         .openapi(&doc);
@@ -65,10 +69,13 @@ async fn default_setup<'cfg>() -> Result<Configs<Empty>, Box<dyn Error>> {
     Ok(cfg)
 }
 
-fn container(channel: Arc<Channel>) -> impl FnMut(&mut web::ServiceConfig) + Send + Sync + 'static {
+fn container(
+    channel: Arc<Channel>,
+    db_pool: Arc<Pool>,
+) -> impl FnMut(&mut web::ServiceConfig) + Send + Sync + 'static {
     move |cfg: &mut ServiceConfig| {
         let publisher = AmqpPublisher::new(channel.clone());
-        let repository = TodoRepositoryImpl::new();
+        let repository = TodoRepositoryImpl::new(db_pool.clone());
 
         cfg.app_data(Data::<Arc<dyn Publisher>>::new(publisher));
         cfg.app_data(Data::<Arc<dyn TodoRepository>>::new(repository));
