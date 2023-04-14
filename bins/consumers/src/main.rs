@@ -13,14 +13,15 @@ use consumers::SimpleConsumer;
 use health_readiness::HealthReadinessServer;
 use lapin::{Channel, Connection};
 use opentelemetry::{global, Context};
-use shared::models::todo::TodoCreatedMessage;
+use shared::{
+    amqp::{EXCHANGE, ROUTING_KEY},
+    models::todo::TodoCreatedMessage,
+};
 use sql_pool::postgres::conn_pool;
 use std::{error::Error, sync::Arc};
 use tracing::error;
 
 pub const QUEUE: &str = "simple-queue";
-pub const EXCHANGE: &str = "simple-exchange";
-pub const ROUTING_KEY: &str = "simple-exchange-key";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

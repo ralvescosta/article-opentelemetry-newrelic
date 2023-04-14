@@ -47,19 +47,19 @@ impl TodoRepository for TodoRepositoryImpl {
         })
     }
 
-    async fn get_by_id(&self, ctx: &Context, id: &str) -> Result<Todo, String> {
+    async fn get_by_id(&self, ctx: &Context, id: &str) -> Result<Option<Todo>, String> {
         let query = "SELECT * FROM todos WHERE id = $1 and deleted_at IS NOT NULL";
 
         let row = self.query_one(ctx, query.to_owned(), &[&id]).await?;
 
-        Ok(Todo {
+        Ok(Some(Todo {
             id: row.get(0),
             name: row.get(1),
             description: row.get(2),
             created_at: row.get(3),
             updated_at: row.get(4),
             deleted_at: None,
-        })
+        }))
     }
 
     async fn list_paginated(

@@ -3,7 +3,7 @@ mod openapi;
 mod routes;
 mod viewmodels;
 
-use actix_web::web::{self, Data, ServiceConfig};
+use actix_web::web::{Data, ServiceConfig};
 use amqp::{
     channel::new_amqp_channel,
     publisher::{AmqpPublisher, Publisher},
@@ -38,11 +38,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let doc = ApiDoc::openapi();
     let server = HTTPServer::new(&cfg.app)
-        .custom_configure(CustomServiceConfigure::new(container(
-            channel.clone(),
-            db_conn.clone(),
-        )))
-        .custom_configure(CustomServiceConfigure::new(todos_routes::routes()))
+        .custom_configure(container(channel.clone(), db_conn.clone()))
+        .custom_configure(todos_routes::routes())
         .health_check(Arc::new(health_checker))
         .openapi(&doc);
 
@@ -69,17 +66,14 @@ async fn default_setup<'cfg>() -> Result<Configs<Empty>, Box<dyn Error>> {
     Ok(cfg)
 }
 
-fn container(
-    channel: Arc<Channel>,
-    db_pool: Arc<Pool>,
-) -> impl FnMut(&mut web::ServiceConfig) + Send + Sync + 'static {
-    move |cfg: &mut ServiceConfig| {
+fn container(channel: Arc<Channel>, db_pool: Arc<Pool>) -> CustomServiceConfigure {
+    CustomServiceConfigure::new(move |cfg: &mut ServiceConfig| {
         let publisher = AmqpPublisher::new(channel.clone());
         let repository = TodoRepositoryImpl::new(db_pool.clone());
 
         cfg.app_data(Data::<Arc<dyn Publisher>>::new(publisher));
         cfg.app_data(Data::<Arc<dyn TodoRepository>>::new(repository));
-    }
+    })
 }
 
 fn declare_health_meter() -> Result<(), Box<dyn Error>> {

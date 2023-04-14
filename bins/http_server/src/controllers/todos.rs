@@ -11,7 +11,11 @@ use http_components::{
     extractors::JwtAuthenticateExtractor, middlewares::otel::HTTPExtractor, viewmodels::HTTPError,
 };
 use opentelemetry::global;
-use shared::{models::todo::TodoCreatedMessage, repositories::TodoRepository};
+use shared::{
+    amqp::{EXCHANGE, ROUTING_KEY},
+    models::todo::TodoCreatedMessage,
+    repositories::TodoRepository,
+};
 use std::sync::Arc;
 use tracing::error;
 
@@ -69,7 +73,10 @@ pub async fn post(
         Ok(p) => Ok(p),
     }?;
 
-    match publisher.simple_publish(&ctx, "", &payload, None).await {
+    match publisher
+        .publish(&ctx, EXCHANGE, ROUTING_KEY, &payload, None)
+        .await
+    {
         Err(err) => {
             error!(error = err.to_string(), "error to create todo");
             Err(HTTPError {
@@ -103,8 +110,31 @@ pub async fn post(
     )
 )]
 #[get("")]
-pub async fn list(_req: HttpRequest, _: JwtAuthenticateExtractor) -> impl Responder {
-    HttpResponse::Ok().body("list::things")
+pub async fn list(
+    req: HttpRequest,
+    _: JwtAuthenticateExtractor,
+    repo: Data<Arc<dyn TodoRepository>>,
+) -> Result<impl Responder, impl ResponseError> {
+    let ctx = global::get_text_map_propagator(|propagator| {
+        propagator.extract(&HTTPExtractor::new(req.headers()))
+    });
+
+    match repo.list_paginated(ctx, 10, 0).await {
+        Err(err) => {
+            error!(error = err.to_string(), "error to create todo");
+            Err(HTTPError {
+                status_code: StatusCode::BAD_REQUEST.into(),
+                message: "error to create todo".to_owned(),
+                details: "error to create todo".to_owned(),
+            })
+        }
+        Ok(todos) => Ok(HttpResponse::Ok().json(
+            todos
+                .into_iter()
+                .map(|e| TodoResponse::from(&e))
+                .collect::<Vec<TodoResponse>>(),
+        )),
+    }
 }
 
 /// Request to get a specific ToDo by ID.
@@ -128,8 +158,32 @@ pub async fn list(_req: HttpRequest, _: JwtAuthenticateExtractor) -> impl Respon
     )
 )]
 #[get("/{id}")]
-pub async fn get(_req: HttpRequest, _: JwtAuthenticateExtractor) -> impl Responder {
-    HttpResponse::Ok().body("get::things")
+pub async fn get(
+    req: HttpRequest,
+    _: JwtAuthenticateExtractor,
+    repo: Data<Arc<dyn TodoRepository>>,
+) -> impl Responder {
+    let ctx = global::get_text_map_propagator(|propagator| {
+        propagator.extract(&HTTPExtractor::new(req.headers()))
+    });
+
+    match repo.get_by_id(&ctx, "").await {
+        Err(err) => {
+            error!(error = err.to_string(), "error to create todo");
+            Err(HTTPError {
+                status_code: StatusCode::BAD_REQUEST.into(),
+                message: "error to create todo".to_owned(),
+                details: "error to create todo".to_owned(),
+            })
+        }
+        Ok(todo) => {
+            if let Some(t) = todo {
+                return Ok(HttpResponse::Ok().json(TodoResponse::from(&t)));
+            }
+
+            Ok(HttpResponse::Ok().finish())
+        }
+    }
 }
 
 /// Request to delete a specific ToDo by ID.

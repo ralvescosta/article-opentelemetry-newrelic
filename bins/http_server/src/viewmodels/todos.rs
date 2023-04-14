@@ -17,7 +17,7 @@ impl Into<CreateTodo> for CreateTodoRequest {
     }
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Default, Serialize, Deserialize, ToSchema)]
 pub struct TodoResponse {
     pub(crate) id: String,
     pub(crate) name: String,

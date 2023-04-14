@@ -1,8 +1,9 @@
 use crate::controllers;
 use actix_web::web::{self, ServiceConfig};
+use http_components::CustomServiceConfigure;
 
-pub fn routes() -> impl FnMut(&mut web::ServiceConfig) + Send + Sync + 'static {
-    move |cfg: &mut ServiceConfig| {
+pub fn routes() -> CustomServiceConfigure {
+    CustomServiceConfigure::new(move |cfg: &mut ServiceConfig| {
         cfg.service(
             web::scope("/v1/todos")
                 .service(controllers::post)
@@ -10,5 +11,5 @@ pub fn routes() -> impl FnMut(&mut web::ServiceConfig) + Send + Sync + 'static {
                 .service(controllers::get)
                 .service(controllers::delete),
         );
-    }
+    })
 }

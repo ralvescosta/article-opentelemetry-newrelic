@@ -2,14 +2,14 @@
 
 members = [
   "bins/http_server",
-  "bins/rabbitmq_consumer",
+  "bins/consumers",
   "infra",
   "shared"
 ]
 
 default-members = [
   "bins/http_server",
-  "bins/rabbitmq_consumer"
+  "bins/consumers"
 ]
 
 [workspace.dependencies]

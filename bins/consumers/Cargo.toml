@@ -1,5 +1,5 @@
 [package]
-name = "rabbitmq-consumer"
+name = "consumers"
 version = "0.1.0"
 edition = "2021"
 
