@@ -8,6 +8,7 @@ use amqp::{
     channel::new_amqp_channel,
     publisher::{AmqpPublisher, Publisher},
 };
+use auth::jwt_manager::auth0::Auth0JwtManager;
 use configs::{Configs, Empty};
 use configs_builder::ConfigBuilder;
 use deadpool_postgres::Pool;
@@ -32,6 +33,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (connection, channel) = new_amqp_channel(&cfg).await?;
     let db_conn = Arc::new(conn_pool(&cfg.postgres)?);
 
+    let auth0 = Auth0JwtManager::new(&cfg.auth0);
+
     let health_checker = HealthReadinessServiceImpl::default()
         .amqp(connection.clone())
         .postgres(db_conn.clone());
@@ -40,6 +43,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let server = HTTPServer::new(&cfg.app)
         .custom_configure(container(channel.clone(), db_conn.clone()))
         .custom_configure(todos_routes::routes())
+        .jwt_manager(auth0)
         .health_check(Arc::new(health_checker))
         .openapi(&doc);
 
