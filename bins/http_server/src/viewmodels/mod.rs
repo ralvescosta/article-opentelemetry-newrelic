@@ -1,3 +1,3 @@
 mod todos;
 
-pub use todos::{CreateTodoRequest, DeleteTodoResponse, TodoResponse};
+pub use todos::{CreateTodoRequest, TodoResponse};

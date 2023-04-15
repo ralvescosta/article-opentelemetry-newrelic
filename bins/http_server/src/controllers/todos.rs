@@ -3,7 +3,7 @@ use actix_web::{
     delete, get,
     http::StatusCode,
     post,
-    web::{Data, Json},
+    web::{Data, Json, Path},
     HttpRequest, HttpResponse, Responder, ResponseError,
 };
 use amqp::publisher::{Payload, Publisher};
@@ -119,19 +119,19 @@ pub async fn list(
         propagator.extract(&HTTPExtractor::new(req.headers()))
     });
 
-    match repo.list_paginated(ctx, 10, 0).await {
+    match repo.list_paginated(&ctx, 10, 0).await {
         Err(err) => {
-            error!(error = err.to_string(), "error to create todo");
+            error!(error = err.to_string(), "error to list todo");
             Err(HTTPError {
                 status_code: StatusCode::BAD_REQUEST.into(),
-                message: "error to create todo".to_owned(),
-                details: "error to create todo".to_owned(),
+                message: "error to list todo".to_owned(),
+                details: "error to list todo".to_owned(),
             })
         }
         Ok(todos) => Ok(HttpResponse::Ok().json(
             todos
-                .into_iter()
-                .map(|e| TodoResponse::from(&e))
+                .iter()
+                .map(|e| TodoResponse::from(e))
                 .collect::<Vec<TodoResponse>>(),
         )),
     }
@@ -160,20 +160,23 @@ pub async fn list(
 #[get("/{id}")]
 pub async fn get(
     req: HttpRequest,
+    path: Path<(String,)>,
     _: JwtAuthenticateExtractor,
     repo: Data<Arc<dyn TodoRepository>>,
-) -> impl Responder {
+) -> Result<impl Responder, impl ResponseError> {
     let ctx = global::get_text_map_propagator(|propagator| {
         propagator.extract(&HTTPExtractor::new(req.headers()))
     });
 
-    match repo.get_by_id(&ctx, "").await {
+    let (id,) = path.into_inner();
+
+    match repo.get_by_id(&ctx, &id).await {
         Err(err) => {
-            error!(error = err.to_string(), "error to create todo");
+            error!(error = err.to_string(), "error to get todo");
             Err(HTTPError {
                 status_code: StatusCode::BAD_REQUEST.into(),
-                message: "error to create todo".to_owned(),
-                details: "error to create todo".to_owned(),
+                message: "error to get todo".to_owned(),
+                details: "error to get todo".to_owned(),
             })
         }
         Ok(todo) => {
@@ -195,9 +198,8 @@ pub async fn get(
     path = "/{id}",
     context_path = "/v1/todos",
     tag = "todos",
-    request_body = ToDoRequest,
     responses(
-        (status = 200, description = "Deleted", body = DeleteThingResponse),
+        (status = 200, description = "Deleted"),
         (status = 400, description = "Bad request", body = HTTPError),
         (status = 401, description = "Unauthorized", body = HTTPError),
         (status = 403, description = "Forbidden", body = HTTPError),
@@ -208,6 +210,27 @@ pub async fn get(
     )
 )]
 #[delete("/{id}")]
-pub async fn delete(_req: HttpRequest, _: JwtAuthenticateExtractor) -> impl Responder {
-    HttpResponse::Ok().body("delete::things")
+pub async fn delete(
+    req: HttpRequest,
+    path: Path<(String,)>,
+    _: JwtAuthenticateExtractor,
+    repo: Data<Arc<dyn TodoRepository>>,
+) -> Result<impl Responder, impl ResponseError> {
+    let ctx = global::get_text_map_propagator(|propagator| {
+        propagator.extract(&HTTPExtractor::new(req.headers()))
+    });
+
+    let (id,) = path.into_inner();
+
+    match repo.delete(&ctx, &id).await {
+        Err(err) => {
+            error!(error = err.to_string(), "error to create todo");
+            Err(HTTPError {
+                status_code: StatusCode::BAD_REQUEST.into(),
+                message: "error to create todo".to_owned(),
+                details: "error to create todo".to_owned(),
+            })
+        }
+        _ => Ok(HttpResponse::Ok().finish()),
+    }
 }

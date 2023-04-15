@@ -35,11 +35,3 @@ impl From<&Todo> for TodoResponse {
         }
     }
 }
-
-#[derive(Serialize, Deserialize, ToSchema)]
-pub struct DeleteTodoResponse {
-    pub(crate) id: String,
-    pub(crate) created_at: String,
-    pub(crate) updated_at: String,
-    pub(crate) deleted_at: String,
-}
