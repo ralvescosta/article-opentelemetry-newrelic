@@ -25,5 +25,29 @@
       "cwd": "${workspaceFolder}",
       "console": "internalConsole"
     },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "consumers",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=consumers",
+          "--package=consumers"
+        ],
+        "filter": {
+          "name": "consumers",
+          "kind": "bin"
+        }
+      },
+      "env": {
+        "RUST_ENV": "local",
+        "APP_NAME": "consumers",
+        "RUST_BACKTRACE": "full",
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "console": "internalConsole"
+    },
   ]
 }
