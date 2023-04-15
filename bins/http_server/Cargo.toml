@@ -17,6 +17,7 @@ traces = { workspace = true  }
 metrics = { workspace = true  }
 health-readiness = { workspace = true }
 sql-pool = { workspace = true, features = ["postgres"] }
+auth = { workspace = true } 
 
 actix-web = { version = "4.3.1" }
 serde = { version = "1.0.159", features = ["derive"] }

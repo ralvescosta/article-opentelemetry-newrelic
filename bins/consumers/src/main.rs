@@ -63,6 +63,7 @@ async fn default_setup() -> Result<Configs<Empty>, Box<dyn Error>> {
     let configs = ConfigBuilder::new()
         .amqp()
         .postgres()
+        .auth0()
         .otlp()
         .build::<Empty>()
         .await?;
