@@ -99,9 +99,9 @@ async fn amqp_setup(
 }
 
 fn declare_health_meter() -> Result<(), Box<dyn Error>> {
-    let meter = global::meter("consumer-meter");
+    let meter = global::meter("consumers-meter");
     let health_counter = meter
-        .i64_observable_up_down_counter("consumer.health")
+        .i64_observable_up_down_counter("consumers.health")
         .with_description("AMQP Consumer Health")
         .init();
     let callback = move |ctx: &Context| {
