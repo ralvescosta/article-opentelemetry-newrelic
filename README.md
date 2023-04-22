@@ -1,5 +1,9 @@
 # OpenTelemetry + Newrelic
 
+
+[Medium - OpenTelemetry With Newrelic](https://medium.com/@ralvescosta/opentelemetry-with-newrelic-3ccae772a660)
+
+
 ### Newrelic Entities
 
 <p align="center">
